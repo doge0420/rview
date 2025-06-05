@@ -1,57 +1,62 @@
 use crossterm::{
-    cursor::{Hide, MoveTo, Show},
+    cursor::{Hide, Show},
     event::{Event, KeyCode, poll, read},
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use std::io::{Write, stdout};
+use point::{Point2D, Point3D};
 use std::time::Duration;
 use terminal_size::{Height, Width, terminal_size};
 
-fn flush_buffer(buffer: &Vec<Vec<char>>) -> std::io::Result<()> {
-    let mut stdout = stdout();
-    execute!(stdout, MoveTo(0, 0))?;
+use crate::framebuffer::Framebuffer;
 
-    let last_row = buffer.len() - 1;
+mod framebuffer;
+mod point;
 
-    for (i, row) in buffer.iter().enumerate() {
-        for &ch in row {
-            write!(stdout, "{}", ch)?;
-        }
-        if i != last_row {
-            write!(stdout, "\n")?;
-        }
-    }
-
-    stdout.flush()?;
-    Ok(())
+fn project(point: &Point3D, distance: f32) -> Point2D {
+    Point2D::from((
+        point.x / (point.z + distance),
+        point.y / (point.z + distance),
+    ))
 }
 
 fn main() -> std::io::Result<()> {
-    execute!(std::io::stdout(), EnterAlternateScreen)?;
+    const DISTANCE: f32 = 10.0;
+    const SCALE: f32 = 5.0;
+
+    let cube: [Point3D; 8] = [
+        Point3D::from((-1.0, -1.0, -1.0)),
+        Point3D::from((1.0, -1.0, -1.0)),
+        Point3D::from((1.0, 1.0, -1.0)),
+        Point3D::from((-1.0, 1.0, -1.0)),
+        Point3D::from((-1.0, -1.0, 1.0)),
+        Point3D::from((1.0, -1.0, 1.0)),
+        Point3D::from((1.0, 1.0, 1.0)),
+        Point3D::from((-1.0, 1.0, 1.0)),
+    ];
+
+    let mut stdout = std::io::stdout();
+
+    // execute!(stdout, EnterAlternateScreen)?;
+    enable_raw_mode()?;
+    execute!(stdout, Hide)?;
 
     let (Width(w), Height(h)) = terminal_size().unwrap();
 
     let width = w as usize;
     let height = h as usize;
 
-    let mut buffer = vec![vec![' '; width]; height];
+    let mut framebuffer = Framebuffer::new_with(' ', width, height);
 
-    enable_raw_mode()?;
-    execute!(stdout(), Hide)?;
+    loop {
+        for point in &cube {
+            let p2d = project(point, DISTANCE);
+            let scaled_p2d = p2d * SCALE;
 
-    for x in 0..width {
-        // Clear buffer
-        for row in &mut buffer {
-            for cell in row.iter_mut() {
-                *cell = ' ';
-            }
+            framebuffer.set_pixel(&scaled_p2d, '*');
         }
 
-        // Draw a star moving horizontally
-        buffer[height / 2][x] = '*';
-
-        flush_buffer(&buffer)?;
+        framebuffer.write_buffer_io(&mut stdout)?;
 
         if poll(Duration::from_millis(5))? {
             let event = read()?;
@@ -62,8 +67,9 @@ fn main() -> std::io::Result<()> {
         }
     }
 
-    execute!(stdout(), Show)?;
+    execute!(stdout, Show)?;
     disable_raw_mode()?;
+    // execute!(std::io::stdout(), LeaveAlternateScreen)
 
-    execute!(std::io::stdout(), LeaveAlternateScreen)
+    Ok(())
 }
