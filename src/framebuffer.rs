@@ -6,7 +6,7 @@ use crossterm::{
     terminal::{Clear, ClearType},
 };
 
-use crate::Point2D;
+use crate::{Point2D, framebuffer};
 
 #[derive(Debug)]
 pub(crate) struct Framebuffer<P> {
@@ -20,8 +20,7 @@ where
     P: Clone,
 {
     pub fn new_with(element: P, width: usize, height: usize) -> Self {
-        let mut pixels = Vec::with_capacity(width * height);
-        pixels.fill(element);
+        let pixels = vec![element; width * height];
 
         Framebuffer {
             pixels,
@@ -39,10 +38,8 @@ where
     }
 
     pub fn set_pixel(&mut self, point: &Point2D, value: P) {
-        let x = (point.x.round() + 10.) as usize;
-        let y = (point.y.round() + 10.) as usize;
-
-        // println!("{} {}", x, y);
+        let x = (point.x.round() + (self.width as f32) / 2.) as usize;
+        let y = (point.y.round() + (self.height as f32) / 2.) as usize;
 
         let idx = self.get_index(x, y);
 
@@ -51,15 +48,17 @@ where
         }
     }
 
-    pub fn clear(&mut self) {
-        self.pixels.clear();
+    pub fn clear(&mut self, value: P) {
+        for pixel in &mut self.pixels {
+            *pixel = value.clone();
+        }
     }
 
     pub fn write_buffer_fmt<W>(&self, _writer: W)
     where
         W: fmt::Write,
     {
-        unimplemented!("Unsupported buffer :(")
+        unimplemented!("Not supported yet :(")
     }
 }
 
@@ -68,18 +67,21 @@ impl Framebuffer<char> {
     where
         W: io::Write,
     {
-        execute!(writer, Clear(ClearType::All), MoveTo(0, 0))?;
-        self.clear();
+        execute!(writer, MoveTo(0, 0), Clear(ClearType::FromCursorDown))?;
 
-        for row in self.pixels.chunks(self.width) {
-            let mut line = String::new();
+        let mut frame = String::with_capacity(self.width * self.height + (self.height - 1));
 
+        for (row_idx, row) in self.pixels.chunks(self.width).enumerate() {
             for &ch in row {
-                line.push(ch);
+                frame.push(ch);
             }
-            write!(writer, "{}\n", line)?;
+
+            if row_idx + 1 < self.height {
+                frame.push('\n');
+            }
         }
 
+        write!(writer, "{}", frame)?;
         writer.flush()?;
 
         Ok(())

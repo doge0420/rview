@@ -21,8 +21,8 @@ fn project(point: &Point3D, distance: f32) -> Point2D {
 }
 
 fn main() -> std::io::Result<()> {
-    const DISTANCE: f32 = 10.0;
-    const SCALE: f32 = 5.0;
+    const DISTANCE: f32 = 5.0;
+    const SCALE: f32 = 10.0;
 
     let cube: [Point3D; 8] = [
         Point3D::from((-1.0, -1.0, -1.0)),
@@ -37,7 +37,7 @@ fn main() -> std::io::Result<()> {
 
     let mut stdout = std::io::stdout();
 
-    // execute!(stdout, EnterAlternateScreen)?;
+    execute!(stdout, EnterAlternateScreen)?;
     enable_raw_mode()?;
     execute!(stdout, Hide)?;
 
@@ -49,6 +49,8 @@ fn main() -> std::io::Result<()> {
     let mut framebuffer = Framebuffer::new_with(' ', width, height);
 
     loop {
+        framebuffer.clear(' ');
+
         for point in &cube {
             let p2d = project(point, DISTANCE);
             let scaled_p2d = p2d * SCALE;
@@ -69,7 +71,7 @@ fn main() -> std::io::Result<()> {
 
     execute!(stdout, Show)?;
     disable_raw_mode()?;
-    // execute!(std::io::stdout(), LeaveAlternateScreen)
+    execute!(std::io::stdout(), LeaveAlternateScreen)?;
 
     Ok(())
 }
