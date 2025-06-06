@@ -6,7 +6,7 @@ use crossterm::{
     terminal::{Clear, ClearType},
 };
 
-use crate::{Point2D, framebuffer};
+use crate::Point2D;
 
 #[derive(Debug)]
 pub(crate) struct Framebuffer<P> {
