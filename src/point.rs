@@ -1,3 +1,4 @@
+use crate::mat3::Mat3;
 use std::ops::Mul;
 
 #[derive(Debug)]
@@ -41,6 +42,22 @@ impl Mul<f32> for Point3D {
             x: self.x * rhs,
             y: self.y * rhs,
             z: self.z * rhs,
+        }
+    }
+}
+
+impl Point3D {
+    pub fn mul_mat(&self, mat: &Mat3, at: f32) -> Self {
+        Point3D {
+            x: self.x * mat.get_and_eval(0, 0, at).unwrap()
+                + self.y * mat.get_and_eval(0, 1, at).unwrap()
+                + self.z * mat.get_and_eval(0, 2, at).unwrap(),
+            y: self.x * mat.get_and_eval(1, 0, at).unwrap()
+                + self.y * mat.get_and_eval(1, 1, at).unwrap()
+                + self.z * mat.get_and_eval(1, 2, at).unwrap(),
+            z: self.x * mat.get_and_eval(2, 0, at).unwrap()
+                + self.y * mat.get_and_eval(2, 1, at).unwrap()
+                + self.z * mat.get_and_eval(2, 2, at).unwrap(),
         }
     }
 }
