@@ -1,5 +1,5 @@
 use crate::mat3::Mat3;
-use std::ops::Mul;
+use std::ops::{Mul, Sub};
 
 #[derive(Debug)]
 pub(crate) struct Point2D {
@@ -46,6 +46,30 @@ impl Mul<f32> for Point3D {
     }
 }
 
+impl Sub<Point3D> for Point3D {
+    type Output = Point3D;
+
+    fn sub(self, rhs: Point3D) -> Self::Output {
+        Point3D {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+        }
+    }
+}
+
+impl<'a, 'b> Sub<&'b Point3D> for &'a Point3D {
+    type Output = Point3D;
+
+    fn sub(self, rhs: &'b Point3D) -> Self::Output {
+        Point3D {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+        }
+    }
+}
+
 impl Point3D {
     pub fn mul_mat(&self, mat: &Mat3, at: f32) -> Self {
         Point3D {
@@ -59,6 +83,18 @@ impl Point3D {
                 + self.y * mat.get_and_eval(2, 1, at).unwrap()
                 + self.z * mat.get_and_eval(2, 2, at).unwrap(),
         }
+    }
+
+    pub fn cross(self, other: Point3D) -> Point3D {
+        Point3D {
+            x: self.y * other.z - self.z * other.y,
+            y: self.z * other.x - self.x * other.z,
+            z: self.x * other.y - self.y * other.x,
+        }
+    }
+
+    pub fn dot(self, other: Point3D) -> f32 {
+        self.x * other.x + self.y * other.y + self.z * other.z
     }
 }
 

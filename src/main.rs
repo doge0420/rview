@@ -1,6 +1,6 @@
 use crossterm::{
     cursor::{Hide, Show},
-    event::{Event, KeyCode, poll, read},
+    event::{DisableMouseCapture, EnableMouseCapture, Event, KeyCode, MouseEventKind, poll, read},
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
@@ -8,11 +8,16 @@ use point::{Point2D, Point3D};
 use std::time::{Duration, Instant};
 use terminal_size::{Height, Width, terminal_size};
 
-use crate::{framebuffer::Framebuffer, mat3::Mat3};
+use crate::{
+    framebuffer::{Buffer, Framebuffer},
+    mat3::Mat3,
+    shape::{Shape, ShapeData},
+};
 
 mod framebuffer;
 mod mat3;
 mod point;
+mod shape;
 
 fn project(point: &Point3D, distance: f32) -> Point2D {
     Point2D::from((
@@ -22,23 +27,50 @@ fn project(point: &Point3D, distance: f32) -> Point2D {
 }
 
 fn main() -> std::io::Result<()> {
-    const DISTANCE: f32 = 5.0;
+    let mut distance = 5.0;
     const SCALE: f32 = 25.0;
 
-    let cube: [Point3D; 8] = [
-        Point3D::from((-1.0, -1.0, -1.0)),
-        Point3D::from((1.0, -1.0, -1.0)),
-        Point3D::from((1.0, 1.0, -1.0)),
-        Point3D::from((-1.0, 1.0, -1.0)),
-        Point3D::from((-1.0, -1.0, 1.0)),
-        Point3D::from((1.0, -1.0, 1.0)),
-        Point3D::from((1.0, 1.0, 1.0)),
-        Point3D::from((-1.0, 1.0, 1.0)),
-    ];
+    let cube = ShapeData::new(
+        &[
+            (-1.0, -1.0, -1.0),
+            (1.0, -1.0, -1.0),
+            (1.0, 1.0, -1.0),
+            (-1.0, 1.0, -1.0),
+            (-1.0, -1.0, 1.0),
+            (1.0, -1.0, 1.0),
+            (1.0, 1.0, 1.0),
+            (-1.0, 1.0, 1.0),
+        ],
+        &[
+            (0, 1, 2),
+            (0, 2, 3), // front
+            (4, 5, 6),
+            (4, 6, 7), // back
+            (0, 1, 5),
+            (0, 5, 4), // bottom
+            (3, 2, 6),
+            (3, 6, 7), // top
+            (1, 2, 6),
+            (1, 6, 5), // right
+            (0, 3, 7),
+            (0, 7, 4), // left
+        ],
+    );
+
+    // let cube: [Point3D; 8] = [
+    //     Point3D::from((-1.0, -1.0, -1.0)),
+    //     Point3D::from((1.0, -1.0, -1.0)),
+    //     Point3D::from((1.0, 1.0, -1.0)),
+    //     Point3D::from((-1.0, 1.0, -1.0)),
+    //     Point3D::from((-1.0, -1.0, 1.0)),
+    //     Point3D::from((1.0, -1.0, 1.0)),
+    //     Point3D::from((1.0, 1.0, 1.0)),
+    //     Point3D::from((-1.0, 1.0, 1.0)),
+    // ];
 
     let mut stdout = std::io::stdout();
 
-    execute!(stdout, EnterAlternateScreen)?;
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     enable_raw_mode()?;
     execute!(stdout, Hide)?;
 
@@ -69,20 +101,37 @@ fn main() -> std::io::Result<()> {
 
         framebuffer.clear(' ');
 
-        for point in &cube {
+        for point in cube.get_points() {
             let rot_point = point.mul_mat(&rot_mat, timer.elapsed().as_secs_f32());
-            let point_2d = project(&rot_point, DISTANCE);
+            let point_2d = project(&rot_point, distance);
             let scaled_point_2d = point_2d * SCALE;
 
             framebuffer.set_pixel(&scaled_point_2d, '+');
         }
 
-        framebuffer.write_buffer_io(&mut stdout)?;
+        framebuffer.write_io(&mut stdout)?;
 
         if poll(Duration::from_millis(5))? {
-            let event = read()?;
-            if event == Event::Key(KeyCode::Char('c').into()) {
-                break;
+            match read()? {
+                Event::Key(key_event) => {
+                    if key_event == KeyCode::Char('c').into() {
+                        break;
+                    }
+                }
+                Event::Mouse(mouse_event) => match mouse_event.kind {
+                    MouseEventKind::ScrollDown => {
+                        if distance < 30.0 {
+                            distance += 1.0
+                        }
+                    }
+                    MouseEventKind::ScrollUp => {
+                        if distance > 2.0 {
+                            distance -= 1.0
+                        }
+                    }
+                    _ => {}
+                },
+                _ => {}
             }
         }
 
@@ -91,7 +140,7 @@ fn main() -> std::io::Result<()> {
 
     execute!(stdout, Show)?;
     disable_raw_mode()?;
-    execute!(std::io::stdout(), LeaveAlternateScreen)?;
+    execute!(std::io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
 
     Ok(())
 }

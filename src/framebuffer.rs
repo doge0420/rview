@@ -8,6 +8,12 @@ use crossterm::{
 
 use crate::Point2D;
 
+pub trait Buffer {
+    fn write_io<W>(&mut self, writer: &mut W) -> std::io::Result<()>
+    where
+        W: io::Write;
+}
+
 #[derive(Debug)]
 pub(crate) struct Framebuffer<P> {
     pub pixels: Vec<P>,
@@ -33,7 +39,7 @@ where
         y * self.width + x
     }
 
-    pub fn get(&self, x: usize, y: usize) -> Option<&P> {
+    pub fn _get(&self, x: usize, y: usize) -> Option<&P> {
         self.pixels.get(self.get_index(x, y))
     }
 
@@ -53,17 +59,10 @@ where
             *pixel = value.clone();
         }
     }
-
-    pub fn write_buffer_fmt<W>(&self, _writer: W)
-    where
-        W: fmt::Write,
-    {
-        unimplemented!("Not supported yet :(")
-    }
 }
 
-impl Framebuffer<char> {
-    pub fn write_buffer_io<W>(&mut self, writer: &mut W) -> std::io::Result<()>
+impl Buffer for Framebuffer<char> {
+    fn write_io<W>(&mut self, writer: &mut W) -> std::io::Result<()>
     where
         W: io::Write,
     {
