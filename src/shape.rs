@@ -1,18 +1,18 @@
-use crate::Point3D;
+use crate::Pos3;
 
 pub trait Shape {
     fn new(points: &[(f32, f32, f32)], faces: &[(usize, usize, usize)]) -> Self;
-    fn get_points(&self) -> &[Point3D];
+    fn get_points(&self) -> &[Pos3];
 }
 
 pub(crate) struct ShapeData {
-    points: Vec<Point3D>,
+    points: Vec<Pos3>,
     faces: Vec<(usize, usize, usize)>,
 }
 
 impl Shape for ShapeData {
     fn new(points: &[(f32, f32, f32)], faces: &[(usize, usize, usize)]) -> Self {
-        let pts = points.iter().map(|&point| Point3D::from(point)).collect();
+        let pts = points.iter().map(|&point| Pos3::from(point)).collect();
 
         ShapeData {
             points: pts,
@@ -20,7 +20,7 @@ impl Shape for ShapeData {
         }
     }
 
-    fn get_points(&self) -> &[Point3D] {
+    fn get_points(&self) -> &[Pos3] {
         &self.points
     }
 }

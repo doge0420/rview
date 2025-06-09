@@ -4,26 +4,35 @@ use crossterm::{
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use point::{Point2D, Point3D};
+use glam::{Mat3, Vec2, Vec3};
 use std::time::{Duration, Instant};
 use terminal_size::{Height, Width, terminal_size};
 
 use crate::{
     framebuffer::{Buffer, Framebuffer},
-    mat3::Mat3,
     shape::{Shape, ShapeData},
 };
 
 mod framebuffer;
-mod mat3;
-mod point;
 mod shape;
 
-fn project(point: &Point3D, distance: f32) -> Point2D {
-    Point2D::from((
+type Pos3 = Vec3;
+type Pos2 = Vec2;
+
+fn project(point: &Pos3, distance: f32) -> Pos2 {
+    Pos2::from((
         point.x / (point.z + distance),
         point.y / (point.z + distance),
     ))
+}
+
+fn rotation_matrix(t: f32) -> Mat3 {
+    let rot_x = Mat3::from_rotation_x(t);
+    let rot_z = Mat3::from_rotation_z(t);
+
+    let rotation = rot_x * rot_z;
+
+    rotation
 }
 
 fn main() -> std::io::Result<()> {
@@ -57,17 +66,6 @@ fn main() -> std::io::Result<()> {
         ],
     );
 
-    // let cube: [Point3D; 8] = [
-    //     Point3D::from((-1.0, -1.0, -1.0)),
-    //     Point3D::from((1.0, -1.0, -1.0)),
-    //     Point3D::from((1.0, 1.0, -1.0)),
-    //     Point3D::from((-1.0, 1.0, -1.0)),
-    //     Point3D::from((-1.0, -1.0, 1.0)),
-    //     Point3D::from((1.0, -1.0, 1.0)),
-    //     Point3D::from((1.0, 1.0, 1.0)),
-    //     Point3D::from((-1.0, 1.0, 1.0)),
-    // ];
-
     let mut stdout = std::io::stdout();
 
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
@@ -80,17 +78,6 @@ fn main() -> std::io::Result<()> {
     let height = h as usize;
 
     let mut framebuffer = Framebuffer::new_with(' ', width, height);
-    let rot_mat = Mat3::new([
-        |theta: f32| theta.cos(),                // [0,0]
-        |theta: f32| -theta.sin() * theta.cos(), // [0,1]
-        |theta: f32| theta.sin() * theta.sin(),  // [0,2]
-        |theta: f32| theta.sin(),                // [1,0]
-        |theta: f32| theta.cos() * theta.cos(),  // [1,1]
-        |theta: f32| -theta.cos() * theta.sin(), // [1,2]
-        |_: f32| 0.0,                            // [2,0]
-        |theta: f32| theta.sin(),                // [2,1]
-        |theta: f32| theta.cos(),                // [2,2]
-    ]);
 
     let mut prev = Instant::now();
     let timer = Instant::now();
@@ -99,10 +86,12 @@ fn main() -> std::io::Result<()> {
         let now = Instant::now();
         let _dt = now.duration_since(prev).as_secs_f32();
 
+        let rotation_matrix = rotation_matrix(timer.elapsed().as_secs_f32());
+
         framebuffer.clear(' ');
 
         for point in cube.get_points() {
-            let rot_point = point.mul_mat(&rot_mat, timer.elapsed().as_secs_f32());
+            let rot_point = rotation_matrix * *point;
             let point_2d = project(&rot_point, distance);
             let scaled_point_2d = point_2d * SCALE;
 

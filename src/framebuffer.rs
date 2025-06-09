@@ -1,4 +1,4 @@
-use std::{fmt, io};
+use std::io;
 
 use crossterm::{
     cursor::MoveTo,
@@ -6,7 +6,7 @@ use crossterm::{
     terminal::{Clear, ClearType},
 };
 
-use crate::Point2D;
+use crate::Pos2;
 
 pub trait Buffer {
     fn write_io<W>(&mut self, writer: &mut W) -> std::io::Result<()>
@@ -43,7 +43,7 @@ where
         self.pixels.get(self.get_index(x, y))
     }
 
-    pub fn set_pixel(&mut self, point: &Point2D, value: P) {
+    pub fn set_pixel(&mut self, point: &Pos2, value: P) {
         let x = (point.x.round() + (self.width as f32) / 2.) as usize;
         let y = (point.y.round() + (self.height as f32) / 2.) as usize;
 
@@ -70,7 +70,7 @@ impl Buffer for Framebuffer<char> {
 
         let mut frame = String::with_capacity(self.width * self.height + (self.height - 1));
 
-        for (row_idx, row) in self.pixels.chunks(self.width).enumerate() {
+        for (row_idx, row) in self.pixels.chunks_exact(self.width).enumerate() {
             for &ch in row {
                 frame.push(ch);
             }
