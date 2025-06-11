@@ -1,4 +1,4 @@
-use std::io;
+use std::{f32, io};
 
 use crossterm::{
     cursor::MoveTo,
@@ -19,6 +19,7 @@ pub(crate) struct Framebuffer<P> {
     pub pixels: Vec<P>,
     height: usize,
     width: usize,
+    depth: Vec<f32>,
 }
 
 impl<P> Framebuffer<P>
@@ -26,12 +27,15 @@ where
     P: Clone,
 {
     pub fn new_with(element: P, width: usize, height: usize) -> Self {
-        let pixels = vec![element; width * height];
+        let pix_count = width * height;
+        let pixels = vec![element; pix_count];
+        let depth = vec![f32::INFINITY; pix_count];
 
         Framebuffer {
             pixels,
             width,
             height,
+            depth,
         }
     }
 
@@ -39,8 +43,8 @@ where
         y * self.width + x
     }
 
-    pub fn _get(&self, x: usize, y: usize) -> Option<&P> {
-        self.pixels.get(self.get_index(x, y))
+    pub fn get_depth(&self, x: usize, y: usize) -> Option<&f32> {
+        self.depth.get(self.get_index(x, y))
     }
 
     pub fn set_pixel(&mut self, point: &Pos2, value: P) {
@@ -55,9 +59,8 @@ where
     }
 
     pub fn clear(&mut self, value: P) {
-        for pixel in &mut self.pixels {
-            *pixel = value.clone();
-        }
+        self.pixels.fill(value);
+        self.depth.fill(f32::INFINITY);
     }
 }
 
