@@ -138,15 +138,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "proj"
-version = "0.1.0"
-dependencies = [
- "crossterm",
- "glam",
- "terminal_size",
-]
-
-[[package]]
 name = "redox_syscall"
 version = "0.5.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -179,6 +170,15 @@ dependencies = [
  "libc",
  "linux-raw-sys 0.9.4",
  "windows-sys",
+]
+
+[[package]]
+name = "rview"
+version = "0.1.0"
+dependencies = [
+ "crossterm",
+ "glam",
+ "terminal_size",
 ]
 
 [[package]]
