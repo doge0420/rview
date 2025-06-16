@@ -1,11 +1,11 @@
-use crate::framebuffer::Framebuffer;
+use crate::{Pos2, framebuffer::Framebuffer};
 use glam::Vec2;
 
 pub fn fill_triangle(
     framebuffer: &mut Framebuffer<char>,
-    p0: Vec2,
-    p1: Vec2,
-    p2: Vec2,
+    p0: Pos2,
+    p1: Pos2,
+    p2: Pos2,
     shade: char,
 ) {
     let min_x = p0.x.min(p1.x).min(p2.x).floor() as i32;
@@ -15,10 +15,6 @@ pub fn fill_triangle(
 
     for y in min_y..=max_y {
         for x in min_x..=max_x {
-            // if let Some(z) = framebuffer.get_depth(x as usize, y as usize) {
-            //     if z < 
-            // }
-
             let px = Vec2::new(x as f32 + 0.5, y as f32 + 0.5);
             if point_in_triangle(px, p0, p1, p2) {
                 framebuffer.set_pixel(&Vec2::new(x as f32, y as f32), shade);
@@ -27,7 +23,7 @@ pub fn fill_triangle(
     }
 }
 
-fn point_in_triangle(p: Vec2, a: Vec2, b: Vec2, c: Vec2) -> bool {
+fn point_in_triangle(p: Pos2, a: Pos2, b: Pos2, c: Pos2) -> bool {
     let v0 = b - a;
     let v1 = c - b;
     let v2 = a - c;

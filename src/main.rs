@@ -1,46 +1,39 @@
 use crossterm::{
     cursor::{Hide, Show},
-    event::{DisableMouseCapture, EnableMouseCapture, Event, KeyCode, MouseEventKind, poll, read},
+    event::{
+        DisableMouseCapture, EnableMouseCapture, Event, KeyCode, MouseButton, MouseEventKind, poll,
+        read,
+    },
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use glam::{Mat3A, Vec2, Vec3, Vec3A};
-use std::time::{Duration, Instant};
+use glam::{Quat, Vec2, Vec3, Vec4};
+use std::{
+    rc::Rc,
+    time::{Duration, Instant},
+};
 use terminal_size::{Height, Width, terminal_size};
 
 use crate::{
-    framebuffer::{Buffer, Framebuffer},
-    raster::fill_triangle,
-    shape::{Shape, ShapeData},
+    camera::Camera, framebuffer::Framebuffer, object::Object, pipeline::Pipeline, shape::ShapeData,
 };
 
+mod camera;
 mod framebuffer;
+mod object;
+mod pipeline;
 mod raster;
 mod shape;
 
-type Pos3 = Vec3A;
+type Pos4 = Vec4;
 type Pos2 = Vec2;
 
 const TARGET_FPS: f32 = 165.0;
 const REFRESH_RATE: f32 = 1.0 / TARGET_FPS;
 const BACKGROUND: char = ' ';
 
-fn project(point: &Pos3, distance: f32, scale: f32) -> Pos2 {
-    Pos2::from((
-        (point.x / (point.z + distance)) * scale,
-        (point.y / (point.z + distance)) * scale,
-    ))
-}
-
-fn rotation_matrix(t: f32) -> Mat3A {
-    // let rot_x = Mat3A::from_rotation_x(t);
-    let rot_z = Mat3A::from_rotation_z(t);
-
-    // let rotation = rot_x * rot_z;
-
-    // rotation
-    rot_z
-}
+const PITCH_SENSITIVITY: f32 = -0.1;
+const YAW_SENSITIVITY: f32 = 0.1;
 
 fn map_brightness_to_char(b: f32) -> char {
     /* from https://stackoverflow.com/a/74186686 */
@@ -74,9 +67,13 @@ fn map_brightness_to_char(b: f32) -> char {
 
 fn main() -> std::io::Result<()> {
     let mut distance = 5.0;
-    const SCALE: f32 = 25.0;
+    const SCALE: f32 = 1.0;
 
-    let cube = ShapeData::new(
+    let mut last_mouse_pos = (0, 0);
+    let mut yaw: f32 = 180.0f32.to_radians();
+    let mut pitch: f32 = 0.0;
+
+    let cube = Rc::new(ShapeData::new(
         &[
             (-1.0, -1.0, -1.0), // 0
             (1.0, -1.0, -1.0),  // 1
@@ -88,12 +85,12 @@ fn main() -> std::io::Result<()> {
             (-1.0, 1.0, 1.0),   // 7
         ],
         &[
-            // Front face (Z = -1)
+            // Back face (Z = -1)
             (0, 1, 2),
             (0, 2, 3),
-            // Back face (Z = +1)
-            (5, 7, 6),
-            (5, 4, 7),
+            // Front face (Z = +1)
+            (4, 6, 5),
+            (4, 7, 6),
             // Bottom face (Y = -1)
             (0, 4, 5),
             (0, 5, 1),
@@ -107,7 +104,17 @@ fn main() -> std::io::Result<()> {
             (4, 0, 3),
             (4, 3, 7),
         ],
-    );
+    ));
+
+    // let double_tri = Rc::new(ShapeData::new(
+    //     &[
+    //         (-1.0, -1.0, 1.0),
+    //         (1.0, -1.0, 2.0),
+    //         (1.0, 1.0, 1.0),
+    //         (-1.0, 1.0, 1.0),
+    //     ],
+    //     &[(0, 2, 1), (0, 3, 2)],
+    // ));
 
     let mut stdout = std::io::stdout();
 
@@ -120,7 +127,23 @@ fn main() -> std::io::Result<()> {
     let width = w as usize;
     let height = h as usize;
 
-    let mut framebuffer = Framebuffer::new_with(BACKGROUND, width, height);
+    let fov = 60f32.to_radians();
+    let aspect_ratio = width as f32 / height as f32;
+
+    let near = 0.01;
+    let far = 100.0;
+
+    let objects = vec![Object::new(
+        cube,
+        Vec3::splat(SCALE),
+        Quat::IDENTITY,
+        Vec3::ZERO,
+    )]
+    .into_boxed_slice();
+
+    let camera = Camera::new();
+    let framebuffer = Framebuffer::new_with(BACKGROUND, width, height, BACKGROUND);
+    let mut pipeline = Pipeline::new(fov, aspect_ratio, near, far, objects, framebuffer, camera);
 
     let mut prev = Instant::now();
     let timer = Instant::now();
@@ -129,45 +152,13 @@ fn main() -> std::io::Result<()> {
         let now = Instant::now();
 
         let _dt = now.duration_since(prev).as_secs_f32();
-        let t = timer.elapsed().as_secs_f32();
+        let _t = timer.elapsed().as_secs_f32();
 
-        let rotation_matrix = rotation_matrix(t / 2.0);
+        pipeline.update_radius(distance);
+        pipeline.rotate_cam_x(pitch);
+        pipeline.rotate_cam_y(yaw);
 
-        framebuffer.clear(BACKGROUND);
-
-        let transformed: Vec<Pos3> = cube
-            .get_points()
-            .iter()
-            .map(|&p| rotation_matrix * p) // rotate each 3D point
-            .collect();
-
-        for &(i1, i2, i3) in cube.get_triangles() {
-            let a = transformed[i1];
-            let b = transformed[i2];
-            let c = transformed[i3];
-
-            let e1 = b - a;
-            let e2 = c - a;
-            let normal = e1.cross(e2).normalize();
-
-            let cam_dir = Vec3A::new(0.0, 0.0, 1.0);
-            if normal.dot(cam_dir) < 0.0 {
-                continue;
-            }
-
-            let light_dir = Vec3A::new(1.0, 0.0, 1.0).normalize();
-            let brightness = normal.dot(light_dir).clamp(0.0, 1.0);
-
-            let shade = map_brightness_to_char(brightness);
-
-            let pa = project(&a, distance, SCALE);
-            let pb = project(&b, distance, SCALE);
-            let pc = project(&c, distance, SCALE);
-
-            fill_triangle(&mut framebuffer, pa, pb, pc, shade);
-        }
-
-        framebuffer.write_io(&mut stdout)?;
+        pipeline.render()?;
 
         if poll(Duration::from_secs_f32(REFRESH_RATE))? {
             match read()? {
@@ -186,6 +177,17 @@ fn main() -> std::io::Result<()> {
                         if distance > 2.0 {
                             distance -= 1.0
                         }
+                    }
+                    MouseEventKind::Drag(MouseButton::Left) => {
+                        let (new_x, new_y) = (mouse_event.column as i32, mouse_event.row as i32);
+                        let (old_x, old_y) = last_mouse_pos;
+                        let dx = new_x - old_x;
+                        let dy = new_y - old_y;
+
+                        yaw += dx as f32 * YAW_SENSITIVITY;
+                        pitch += dy as f32 * PITCH_SENSITIVITY;
+
+                        last_mouse_pos = (new_x, new_y);
                     }
                     _ => {}
                 },
