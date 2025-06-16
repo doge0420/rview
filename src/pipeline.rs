@@ -1,6 +1,6 @@
 use std::io::stdout;
 
-use glam::{Mat4, Vec2, Vec3, Vec4, Vec4Swizzles};
+use glam::{Mat4, Vec2, Vec3, Vec4Swizzles};
 
 use crate::{
     Framebuffer, Pos2, Pos4, camera::Camera, framebuffer::Buffer, map_brightness_to_char,
@@ -86,8 +86,8 @@ where
 
                 let camera_position = self.camera.get_position();
 
-                let cam_dir = (camera_position - Vec3::ZERO).normalize();
-                if normal.dot(cam_dir) > 0.0 {
+                let view_vec = (camera_position - a.xyz()).normalize();
+                if normal.dot(view_vec) > 0.0 {
                     continue;
                 }
 
