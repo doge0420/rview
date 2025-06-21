@@ -64,7 +64,6 @@ fn map_brightness_to_char(b: f32) -> char {
 
 fn main() -> std::io::Result<()> {
     let mut distance = 5.0;
-    const SCALE: f32 = 1.0;
 
     let mut last_mouse_pos = (0, 0);
     let mut yaw: f32 = 180.0f32.to_radians();
@@ -88,7 +87,7 @@ fn main() -> std::io::Result<()> {
     let far = 100.0;
 
     let objects = Box::new([load(
-        "model/monke.obj",
+        "model/teapot.obj",
         Vec3::splat(1.0),
         Quat::IDENTITY,
         Vec3::ZERO,

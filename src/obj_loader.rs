@@ -82,9 +82,6 @@ impl Object {
     }
 }
 
-// 506 vertex
-// 941 normals
-
 impl Model for Object {
     fn get_points(&self) -> &[Pos4] {
         &self.vertex
@@ -92,9 +89,5 @@ impl Model for Object {
 
     fn get_triangles(&self) -> &[Face] {
         &self.faces
-    }
-
-    fn get_normals(&self) -> &[Vec3A] {
-        &self.normals
     }
 }
