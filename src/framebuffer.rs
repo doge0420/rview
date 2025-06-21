@@ -46,18 +46,25 @@ where
         y * self.width + x
     }
 
-    pub fn get_depth(&self, x: usize, y: usize) -> Option<&f32> {
+    pub fn _get_depth(&self, x: usize, y: usize) -> Option<&f32> {
         self.depth.get(self.get_index(x, y))
     }
 
-    pub fn set_pixel(&mut self, point: &Pos2, value: P) {
+    pub fn set_pixel_with_depth(&mut self, point: &Pos2, value: P, depth: f32) {
         let x = point.x.round() as usize;
         let y = point.y.round() as usize;
 
+        if x >= self.width || y >= self.height {
+            return;
+        }
+
         let idx = self.get_index(x, y);
 
-        if let Some(pixel) = self.pixels.get_mut(idx) {
-            *pixel = value;
+        if depth < self.depth[idx] {
+            self.depth[idx] = depth;
+            if let Some(pixel) = self.pixels.get_mut(idx) {
+                *pixel = value;
+            }
         }
     }
 

@@ -7,26 +7,23 @@ use crossterm::{
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use glam::{Quat, Vec2, Vec3, Vec4};
-use std::{
-    rc::Rc,
-    time::{Duration, Instant},
-};
+use glam::{Quat, Vec2, Vec3, Vec3A, Vec4};
+use std::time::{Duration, Instant};
 use terminal_size::{Height, Width, terminal_size};
 
-use crate::{
-    camera::Camera, framebuffer::Framebuffer, object::Object, pipeline::Pipeline, shape::ShapeData,
-};
+use crate::{camera::Camera, framebuffer::Framebuffer, obj_loader::load, pipeline::Pipeline};
 
 mod camera;
 mod framebuffer;
-mod object;
+mod model;
+mod obj_loader;
 mod pipeline;
 mod raster;
-mod shape;
 
 type Pos4 = Vec4;
+type Pos3 = Vec3A;
 type Pos2 = Vec2;
+type Face = (usize, usize, usize);
 
 const TARGET_FPS: f32 = 165.0;
 const REFRESH_RATE: f32 = 1.0 / TARGET_FPS;
@@ -73,49 +70,6 @@ fn main() -> std::io::Result<()> {
     let mut yaw: f32 = 180.0f32.to_radians();
     let mut pitch: f32 = 0.0;
 
-    let cube = Rc::new(ShapeData::new(
-        &[
-            (-1.0, -1.0, -1.0), // 0
-            (1.0, -1.0, -1.0),  // 1
-            (1.0, 1.0, -1.0),   // 2
-            (-1.0, 1.0, -1.0),  // 3
-            (-1.0, -1.0, 1.0),  // 4
-            (1.0, -1.0, 1.0),   // 5
-            (1.0, 1.0, 1.0),    // 6
-            (-1.0, 1.0, 1.0),   // 7
-        ],
-        &[
-            // Back face (Z = -1)
-            (0, 1, 2),
-            (0, 2, 3),
-            // Front face (Z = +1)
-            (4, 6, 5),
-            (4, 7, 6),
-            // Bottom face (Y = -1)
-            (0, 4, 5),
-            (0, 5, 1),
-            // Top face (Y = +1)
-            (3, 2, 6),
-            (3, 6, 7),
-            // Right face (X = +1)
-            (1, 5, 6),
-            (1, 6, 2),
-            // Left face (X = -1)
-            (4, 0, 3),
-            (4, 3, 7),
-        ],
-    ));
-
-    // let double_tri = Rc::new(ShapeData::new(
-    //     &[
-    //         (-1.0, -1.0, 1.0),
-    //         (1.0, -1.0, 2.0),
-    //         (1.0, 1.0, 1.0),
-    //         (-1.0, 1.0, 1.0),
-    //     ],
-    //     &[(0, 2, 1), (0, 3, 2)],
-    // ));
-
     let mut stdout = std::io::stdout();
 
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
@@ -133,13 +87,12 @@ fn main() -> std::io::Result<()> {
     let near = 0.01;
     let far = 100.0;
 
-    let objects = vec![Object::new(
-        cube,
-        Vec3::splat(SCALE),
+    let objects = Box::new([load(
+        "model/monke.obj",
+        Vec3::splat(1.0),
         Quat::IDENTITY,
         Vec3::ZERO,
-    )]
-    .into_boxed_slice();
+    )?]);
 
     let camera = Camera::new();
     let framebuffer = Framebuffer::new_with(BACKGROUND, width, height, BACKGROUND);

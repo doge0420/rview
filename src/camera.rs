@@ -1,4 +1,4 @@
-use glam::{Mat4, Vec3};
+use glam::{Mat4, Vec3, Vec3A};
 
 const UP: Vec3 = Vec3::Y;
 const TARGET: Vec3 = Vec3::ZERO;
@@ -48,11 +48,11 @@ impl Camera {
         self.view_matrix = Mat4::look_at_rh(eye, target, UP);
     }
 
-    pub fn get_position(&self) -> Vec3 {
+    pub fn get_position(&self) -> Vec3A {
         let x = self.radius * self.pitch.cos() * self.yaw.cos();
         let y = self.radius * self.pitch.sin();
         let z = self.radius * self.pitch.cos() * self.yaw.sin();
-        Vec3::new(x, y, z)
+        Vec3A::new(x, y, z)
     }
 
     pub fn update_radius(&mut self, radius: f32) {
