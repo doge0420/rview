@@ -14,7 +14,7 @@ obj-rs = "0.7.4"
 opt-level = 3
 
 [profile.release]
-lto = true
+lto = "fat"
 opt-level = 3
 codegen-units = 1
 incremental = false
