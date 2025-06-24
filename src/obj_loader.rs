@@ -13,11 +13,10 @@ pub fn load(
 ) -> Result<Object, io::Error> {
     let input = BufReader::new(File::open(file_name)?);
     let model: Obj<Vertex, u32> =
-        load_obj(input).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        load_obj(input).map_err(io::Error::other)?;
 
     if model.indices.len() % 3 != 0 {
-        return Err(io::Error::new(
-            io::ErrorKind::Other,
+        return Err(io::Error::other(
             "indices are not a multiple of 3",
         ));
     }
@@ -70,7 +69,7 @@ impl Object {
 
         let mut transformed_vertex = Vec::with_capacity(vertex.len());
         for vertex in vertex.iter() {
-            transformed_vertex.push(model_matrix * vertex.clone());
+            transformed_vertex.push(model_matrix * *vertex);
         }
 
         Object {
