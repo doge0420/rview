@@ -126,7 +126,7 @@ fn main() -> std::io::Result<()> {
                         }
                     }
                     MouseEventKind::ScrollUp => {
-                        if distance > 2.0 {
+                        if distance > 1.0 {
                             distance -= 1.0
                         }
                     }

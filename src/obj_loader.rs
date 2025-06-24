@@ -1,7 +1,7 @@
 use std::{fs::File, io, io::BufReader};
 
 use glam::{Mat4, Quat, Vec3, Vec3A, Vec4};
-use obj::{Obj, load_obj};
+use obj::{Obj, Vertex, load_obj};
 
 use crate::{Face, Pos4, model::Model};
 
@@ -12,7 +12,8 @@ pub fn load(
     translation: Vec3,
 ) -> Result<Object, io::Error> {
     let input = BufReader::new(File::open(file_name)?);
-    let model: Obj = load_obj(input).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+    let model: Obj<Vertex, u32> =
+        load_obj(input).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
 
     if model.indices.len() % 3 != 0 {
         return Err(io::Error::new(
@@ -52,12 +53,12 @@ pub(crate) struct Object {
     vertex: Vec<Vec4>,
     normals: Vec<Vec3A>,
     faces: Vec<Face>,
-    model: Obj,
+    model: Obj<Vertex, u32>,
 }
 
 impl Object {
     pub fn new(
-        model: Obj,
+        model: Obj<Vertex, u32>,
         vertex: Vec<Pos4>,
         faces: Vec<Face>,
         normals: Vec<Vec3A>,
