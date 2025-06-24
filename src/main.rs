@@ -1,3 +1,4 @@
+use clap::Parser;
 use crossterm::{
     cursor::{Hide, Show},
     event::{
@@ -62,7 +63,15 @@ fn map_brightness_to_char(b: f32) -> char {
     PALETTE.chars().nth(index).unwrap_or('▓')
 }
 
+#[derive(Parser)]
+#[command(about = "A fast terminal 3D rasterizer 🦀", long_about = None)]
+struct Cli {
+    file_name: String,
+}
+
 fn main() -> std::io::Result<()> {
+    let args = Cli::parse();
+
     let mut distance = 5.0;
 
     let mut last_mouse_pos = (0, 0);
@@ -80,14 +89,14 @@ fn main() -> std::io::Result<()> {
     let width = w as usize;
     let height = h as usize;
 
-    let fov = 60f32.to_radians();
+    let fov = 40f32.to_radians();
     let aspect_ratio = width as f32 / height as f32;
 
     let near = 0.01;
-    let far = 100.0;
+    let far = 10.0;
 
     let objects = Box::new([load(
-        "model/teapot.obj",
+        &args.file_name,
         Vec3::splat(1.0),
         Quat::IDENTITY,
         Vec3::ZERO,
@@ -122,12 +131,12 @@ fn main() -> std::io::Result<()> {
                 Event::Mouse(mouse_event) => match mouse_event.kind {
                     MouseEventKind::ScrollDown => {
                         if distance < 30.0 {
-                            distance += 1.0
+                            distance += 0.5
                         }
                     }
                     MouseEventKind::ScrollUp => {
                         if distance > 1.0 {
-                            distance -= 1.0
+                            distance -= 0.5
                         }
                     }
                     MouseEventKind::Drag(MouseButton::Left) => {
