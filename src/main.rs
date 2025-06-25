@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use clap::Parser;
 use crossterm::{
     cursor::{Hide, Show},
@@ -66,10 +67,10 @@ fn map_brightness_to_char(b: f32) -> char {
 #[derive(Parser)]
 #[command(about = "A fast terminal 3D rasterizer 🦀", long_about = None)]
 struct Cli {
-    file_name: String,
+    file_path: String,
 }
 
-fn main() -> std::io::Result<()> {
+fn main() -> Result<()> {
     let args = Cli::parse();
 
     let mut distance = 5.0;
@@ -80,11 +81,8 @@ fn main() -> std::io::Result<()> {
 
     let mut stdout = std::io::stdout();
 
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    enable_raw_mode()?;
-    execute!(stdout, Hide)?;
-
-    let (Width(w), Height(h)) = terminal_size().unwrap();
+    let (Width(w), Height(h)) =
+        terminal_size().context("Couldn't get terminal size with terminal_size.")?;
 
     let width = w as usize;
     let height = h as usize;
@@ -96,11 +94,12 @@ fn main() -> std::io::Result<()> {
     let far = 10.0;
 
     let objects = Box::new([load(
-        &args.file_name,
+        &args.file_path,
         Vec3::splat(1.0),
         Quat::IDENTITY,
         Vec3::ZERO,
-    )?]);
+    )
+    .with_context(|| format!("Couldn't find {}", &args.file_path))?]);
 
     let camera = Camera::new();
     let framebuffer = Framebuffer::new_with(BACKGROUND, width, height, BACKGROUND);
@@ -108,6 +107,11 @@ fn main() -> std::io::Result<()> {
 
     let mut prev = Instant::now();
     let timer = Instant::now();
+
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)
+        .context("Couldn't execute crossterm commands.")?;
+    enable_raw_mode().context("Couldn't enter crossterm raw mode.")?;
+    execute!(stdout, Hide).context("Couldn't hide cursor with crossterm.")?;
 
     loop {
         let now = Instant::now();
@@ -119,10 +123,10 @@ fn main() -> std::io::Result<()> {
         pipeline.rotate_cam_x(pitch);
         pipeline.rotate_cam_y(yaw);
 
-        pipeline.render()?;
+        pipeline.render().context("Failed to render frame.")?;
 
         if poll(Duration::from_secs_f32(REFRESH_RATE))? {
-            match read()? {
+            match read().context("Failed to read event with crossterm.")? {
                 Event::Key(key_event) => {
                     if key_event == KeyCode::Char('c').into() {
                         break;
@@ -159,9 +163,10 @@ fn main() -> std::io::Result<()> {
         prev = now;
     }
 
-    execute!(stdout, Show)?;
-    disable_raw_mode()?;
-    execute!(std::io::stdout(), LeaveAlternateScreen, DisableMouseCapture)?;
+    execute!(stdout, Show).context("Couldn't show cursor with crossterm.")?;
+    disable_raw_mode().context("Couldn't exit crossterm raw mode.")?;
+    execute!(std::io::stdout(), LeaveAlternateScreen, DisableMouseCapture)
+        .context("Couldn't execute crossterm commands.")?;
 
     Ok(())
 }

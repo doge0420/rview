@@ -1,5 +1,6 @@
 use std::{f32, io};
 
+use anyhow::{Context, Result};
 use crossterm::{
     cursor::MoveTo,
     execute,
@@ -9,7 +10,7 @@ use crossterm::{
 use crate::Pos2;
 
 pub trait Buffer {
-    fn write_io<W>(&mut self, writer: &mut W) -> std::io::Result<()>
+    fn write_io<W>(&mut self, writer: &mut W) -> Result<()>
     where
         W: io::Write;
 }
@@ -85,11 +86,12 @@ where
 }
 
 impl Buffer for Framebuffer<char> {
-    fn write_io<W>(&mut self, writer: &mut W) -> std::io::Result<()>
+    fn write_io<W>(&mut self, writer: &mut W) -> Result<()>
     where
         W: io::Write,
     {
-        execute!(writer, MoveTo(0, 0), Clear(ClearType::FromCursorDown))?;
+        execute!(writer, MoveTo(0, 0), Clear(ClearType::FromCursorDown))
+            .context("Couldn't execute crossterm commands.")?;
 
         let mut frame = String::with_capacity(self.width * self.height + (self.height - 1));
 
@@ -104,7 +106,7 @@ impl Buffer for Framebuffer<char> {
         }
 
         write!(writer, "{}", frame)?;
-        writer.flush()?;
+        writer.flush().context("Couldn't flush the terminal.")?;
 
         Ok(())
     }

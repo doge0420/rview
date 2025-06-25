@@ -1,5 +1,6 @@
 use std::{f32, io::stdout};
 
+use anyhow::Result;
 use glam::{Mat4, Vec3A, Vec4Swizzles};
 
 use crate::{
@@ -62,7 +63,7 @@ impl Pipeline<char> {
         self.camera.update_radius(radius);
     }
 
-    pub fn render(&mut self) -> std::io::Result<()> {
+    pub fn render(&mut self) -> Result<()> {
         self.framebuffer.clear();
 
         let camera_position = self.camera.get_position();
