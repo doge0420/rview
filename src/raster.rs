@@ -39,5 +39,8 @@ pub fn fill_triangle(
 }
 
 fn edge_function(a: Vec2, b: Vec2, c: Vec2) -> f32 {
-    (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x)
+    let ac = c - a;
+    let ba = b - a;
+
+    ac.perp_dot(ba)
 }
