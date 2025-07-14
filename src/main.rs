@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use clap::Parser;
+use clap::{Parser, arg};
 use crossterm::{
     cursor::{Hide, Show},
     event::{
@@ -10,7 +10,10 @@ use crossterm::{
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use glam::{Quat, Vec2, Vec3, Vec3A, Vec4};
-use std::time::{Duration, Instant};
+use std::{
+    path::PathBuf,
+    time::{Duration, Instant},
+};
 use terminal_size::{Height, Width, terminal_size};
 
 use crate::{camera::Camera, framebuffer::Framebuffer, obj_loader::load, pipeline::Pipeline};
@@ -65,19 +68,44 @@ fn map_brightness_to_char(b: f32) -> char {
 }
 
 #[derive(Parser)]
-#[command(about = "A fast terminal 3D rasterizer 🦀", long_about = None)]
+#[command(about = "A fast cli Wavefront (.obj) file rasterizer 🦀", long_about = None)]
 struct Cli {
-    file_path: String,
+    /// File path
+    file_path: PathBuf,
+
+    /// Yaw of the camera
+    #[arg(long, default_value_t = 180.0f32.to_radians())]
+    yaw: f32,
+
+    /// Pitch of the camera
+    #[arg(long, default_value_t = 0.0)]
+    pitch: f32,
+
+    /// Fov
+    #[arg(long, default_value_t = 40f32.to_radians())]
+    fov: f32,
+
+    /// Near clipping plane
+    #[arg(long, default_value_t = 0.01)]
+    near: f32,
+
+    /// Far clipping plane
+    #[arg(long, default_value_t = 10.0)]
+    far: f32,
+
+    /// Distance of the camera from the origin
+    #[arg(short, long, default_value_t = 5.0)]
+    distance: f32,
 }
 
 fn main() -> Result<()> {
     let args = Cli::parse();
 
-    let mut distance = 5.0;
+    let mut distance = args.distance;
 
     let mut last_mouse_pos = (0, 0);
-    let mut yaw: f32 = 180.0f32.to_radians();
-    let mut pitch: f32 = 0.0;
+    let mut yaw: f32 = args.yaw;
+    let mut pitch: f32 = args.pitch;
 
     let mut stdout = std::io::stdout();
 
@@ -87,19 +115,19 @@ fn main() -> Result<()> {
     let width = w as usize;
     let height = h as usize;
 
-    let fov = 40f32.to_radians();
+    let fov = args.fov;
     let aspect_ratio = width as f32 / height as f32;
 
-    let near = 0.01;
-    let far = 10.0;
+    let near = args.near;
+    let far = args.far;
 
-    let objects = Box::new([load(
-        &args.file_path,
-        Vec3::splat(1.0),
-        Quat::IDENTITY,
-        Vec3::ZERO,
-    )
-    .with_context(|| format!("Couldn't find {}", &args.file_path))?]);
+    let path = args
+        .file_path
+        .to_str()
+        .expect("Cannot convert path to string.");
+
+    let objects = Box::new([load(path, Vec3::splat(1.0), Quat::IDENTITY, Vec3::ZERO)
+        .with_context(|| format!("Couldn't load {}", path))?]);
 
     let camera = Camera::new();
     let framebuffer = Framebuffer::new_with(BACKGROUND, width, height, BACKGROUND);
