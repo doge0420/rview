@@ -70,6 +70,9 @@ impl Pipeline<char> {
         let view_matrix = self.camera.get_view_matrix();
         let proj_matrix = self.projection_matrix;
 
+        let width = self.framebuffer.width();
+        let height = self.framebuffer.height();
+
         for object in self.objects.iter_mut() {
             let vertex = object.get_points().to_vec();
             let triangles = object.get_triangles();
@@ -104,12 +107,9 @@ impl Pipeline<char> {
                 let vb_clip = proj_matrix * b_view;
                 let vc_clip = proj_matrix * c_view;
 
-                let pa =
-                    project_to_screen(va_clip, self.framebuffer.width(), self.framebuffer.height());
-                let pb =
-                    project_to_screen(vb_clip, self.framebuffer.width(), self.framebuffer.height());
-                let pc =
-                    project_to_screen(vc_clip, self.framebuffer.width(), self.framebuffer.height());
+                let pa = project_to_screen(va_clip, width, height);
+                let pb = project_to_screen(vb_clip, width, height);
+                let pc = project_to_screen(vc_clip, width, height);
 
                 fill_triangle(&mut self.framebuffer, pa, pb, pc, shade);
             }
