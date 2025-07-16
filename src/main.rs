@@ -74,8 +74,8 @@ fn main() -> Result<()> {
     let mut distance = args.distance;
 
     let mut last_mouse_pos = (0, 0);
-    let mut yaw: f32 = args.yaw;
-    let mut pitch: f32 = args.pitch;
+    let mut yaw: f32 = args.yaw.to_radians();
+    let mut pitch: f32 = args.pitch.to_radians();
 
     let mut stdout = std::io::stdout();
 
