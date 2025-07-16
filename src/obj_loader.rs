@@ -45,11 +45,11 @@ pub fn load(
 }
 
 pub(crate) struct Object {
-    model_matrix: Mat4,
+    _model_matrix: Mat4,
     vertex: Vec<Vec4>,
-    normals: Vec<Vec3A>,
+    _normals: Vec<Vec3A>,
     faces: Vec<Face>,
-    model: Obj<Vertex, u32>,
+    _model: Obj<Vertex, u32>,
 }
 
 impl Object {
@@ -70,11 +70,11 @@ impl Object {
         }
 
         Object {
-            model,
+            _model: model,
             vertex: transformed_vertex,
             faces,
-            normals,
-            model_matrix,
+            _normals: normals,
+            _model_matrix: model_matrix,
         }
     }
 }
