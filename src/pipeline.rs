@@ -38,7 +38,7 @@ where
 }
 
 fn project_to_screen(point: Pos4, framebuffer_width: usize, framebuffer_height: usize) -> Pos3 {
-    let ndc = point.truncate() / point.w + f32::EPSILON; // Vec3(x/w, y/w, z/w)
+    let ndc = point.truncate() / (point.w + f32::EPSILON); // Vec3(x/w, y/w, z/w)
 
     Vec3A::new(
         (ndc.x + 1.0) * 0.5 * framebuffer_width as f32,
