@@ -116,7 +116,7 @@ fn main() -> Result<()> {
         stdout,
         EnterAlternateScreen,
         EnableMouseCapture,
-        SetTitle("")
+        SetTitle("rview")
     )
     .context("Couldn't execute crossterm commands.")?;
     enable_raw_mode().context("Couldn't enter crossterm raw mode.")?;
