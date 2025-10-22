@@ -1,9 +1,14 @@
-use std::{fs::File, io, io::BufReader};
+use std::{
+    fs::File,
+    io::{self, BufReader},
+};
 
 use glam::{Mat4, Quat, Vec3, Vec3A, Vec4};
 use obj::{Obj, Vertex, load_obj};
 
-use crate::{Face, Pos4, model::Model};
+use crate::{Face, MIN_CAM_DISTANCE, Pos4, model::Model};
+
+const EPSILON: f32 = 0.01;
 
 pub fn load(
     file_name: &str,
@@ -14,7 +19,7 @@ pub fn load(
     let input = BufReader::new(File::open(file_name)?);
     let model: Obj<Vertex, u32> = load_obj(input).map_err(io::Error::other)?;
 
-    if model.indices.len() % 3 != 0 {
+    if !model.indices.len().is_multiple_of(3) {
         return Err(io::Error::other("indices are not a multiple of 3"));
     }
 
@@ -22,10 +27,23 @@ pub fn load(
     let mut vertex = Vec::with_capacity(size);
     let mut normals = Vec::with_capacity(size);
 
-    model.vertices.iter().for_each(|v| {
-        vertex.push(Vec4::new(v.position[0], v.position[1], v.position[2], 1.0));
-        normals.push(Vec3A::from_array(v.normal));
-    });
+    let max_len_sq = model
+        .vertices
+        .iter()
+        .map(|v| {
+            let p = Vec3A::from_array(v.position);
+            p.length_squared()
+        })
+        .reduce(f32::max)
+        .ok_or(io::Error::other("model has no vertices"))?;
+
+    let factor = (MIN_CAM_DISTANCE - EPSILON) / max_len_sq.sqrt();
+
+    for v in &model.vertices {
+        let pos = Vec3A::from_array(v.position) * factor;
+        vertex.push(Vec4::new(pos.x, pos.y, pos.z, 1.0));
+        normals.push(Vec3A::from_array(v.normal).normalize());
+    }
 
     let faces = model
         .indices
