@@ -7,7 +7,9 @@ use crossterm::{
         read,
     },
     execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+    terminal::{
+        EnterAlternateScreen, LeaveAlternateScreen, SetTitle, disable_raw_mode, enable_raw_mode,
+    },
 };
 use glam::{Quat, Vec2, Vec3, Vec3A, Vec4};
 use std::{
@@ -30,9 +32,13 @@ type Pos3 = Vec3A;
 type Pos2 = Vec2;
 type Face = (usize, usize, usize);
 
-const TARGET_FPS: f32 = 165.0;
-const REFRESH_RATE: f32 = 1.0 / TARGET_FPS;
+const TARGET_FPS: u32 = 200;
+const REFRESH_RATE: f32 = 1.0 / TARGET_FPS as f32;
 const BACKGROUND: char = ' ';
+
+const MAX_CAM_DISTANCE: f32 = 30.0;
+const MIN_CAM_DISTANCE: f32 = 1.0;
+const CAM_DISTANCE_STEP: f32 = 0.5;
 
 const PITCH_SENSITIVITY: f32 = -0.1;
 const YAW_SENSITIVITY: f32 = 0.1;
@@ -106,8 +112,13 @@ fn main() -> Result<()> {
     let mut prev = Instant::now();
     let timer = Instant::now();
 
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)
-        .context("Couldn't execute crossterm commands.")?;
+    execute!(
+        stdout,
+        EnterAlternateScreen,
+        EnableMouseCapture,
+        SetTitle("")
+    )
+    .context("Couldn't execute crossterm commands.")?;
     enable_raw_mode().context("Couldn't enter crossterm raw mode.")?;
     execute!(stdout, Hide).context("Couldn't hide cursor with crossterm.")?;
 
@@ -132,13 +143,13 @@ fn main() -> Result<()> {
                 }
                 Event::Mouse(mouse_event) => match mouse_event.kind {
                     MouseEventKind::ScrollDown => {
-                        if distance < 30.0 {
-                            distance += 0.5
+                        if distance < MAX_CAM_DISTANCE {
+                            distance += CAM_DISTANCE_STEP;
                         }
                     }
                     MouseEventKind::ScrollUp => {
-                        if distance > 1.0 {
-                            distance -= 0.5
+                        if distance > MIN_CAM_DISTANCE {
+                            distance -= CAM_DISTANCE_STEP;
                         }
                     }
                     MouseEventKind::Drag(MouseButton::Left) => {
