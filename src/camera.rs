@@ -38,14 +38,10 @@ impl Camera {
     }
 
     pub fn update_view_matrix(&mut self) {
-        let x = self.radius * self.pitch.cos() * self.yaw.cos();
-        let y = self.radius * self.pitch.sin();
-        let z = self.radius * self.pitch.cos() * self.yaw.sin();
-
-        let eye = Vec3::new(x, y, z);
+        let eye = self.get_position();
         let target = Vec3::ZERO;
 
-        self.view_matrix = Mat4::look_at_rh(eye, target, UP);
+        self.view_matrix = Mat4::look_at_rh(eye.into(), target, UP);
     }
 
     pub fn get_position(&self) -> Vec3A {
